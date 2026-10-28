@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>给工牌写一张名片</title>
+<style>
+  :root {
+    --ink: #10192a;
+    --muted: #5b6a82;
+    --line: #dde4ef;
+    --bg: #f4f6fa;
+    --card: #ffffff;
+    --accent: #1f6feb;
+    --ok: #1a7f37;
+    --err: #c0392b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px 16px 48px;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+          "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  main { max-width: 520px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 6px; letter-spacing: .01em; }
+  .lede { color: var(--muted); margin: 0 0 20px; font-size: 14px; }
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  input {
+    width: 100%;
+    padding: 11px 12px;
+    font: inherit;
+    color: var(--ink);
+    background: #fbfcfe;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    outline: none;
+  }
+  input:focus { border-color: var(--accent); background: #fff; }
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 5px; }
+  .hint.over { color: var(--err); }
+  button {
+    width: 100%;
+    padding: 13px 16px;
+    font: inherit;
+    font-weight: 600;
+    border-radius: 11px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: opacity .15s ease;
+  }
+  button:disabled { opacity: .45; cursor: default; }
+  .primary { background: var(--accent); color: #fff; }
+  .ghost { background: #fff; color: var(--ink); border-color: var(--line); }
+  .row { display: flex; gap: 10px; }
+  .row > button { flex: 1; }
+  #status {
+    display: none;
+    border-radius: 11px;
+    padding: 11px 13px;
+    font-size: 14px;
+    margin-bottom: 14px;
+    white-space: pre-wrap;
+  }
+  #status.show { display: block; }
+  #status.info { background: #eef4ff; color: #14418f; }
+  #status.ok { background: #eaf7ee; color: var(--ok); }
+  #status.err { background: #fdeeec; color: var(--err); }
+  .now {
+    font-size: 14px;
+    color: var(--muted);
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line);
+  }
+  .now b { color: var(--ink); font-weight: 600; }
+  ol { padding-left: 20px; margin: 8px 0 0; font-size: 14px; color: var(--muted); }
+  ol li { margin-bottom: 6px; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    background: #eef1f6;
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+  footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>给工牌写一张名片</h1>
+  <p class="lede">填好姓名、单位和工号，存进工牌。之后这块屏就是你的名片，第二页的二维码手机扫一下就能存进通讯录。</p>
+
+  <div id="status"></div>
+
+  <div class="panel">
+    <div class="row" style="margin-bottom:14px">
+      <button id="connect" class="primary">连接工牌</button>
+      <button id="disconnect" class="ghost" disabled>断开</button>
+    </div>
+    <div class="now" id="now" hidden></div>
+  </div>
+
+  <div class="panel">
+    <div class="field">
+      <label for="name">姓名</label>
+      <input id="name" maxlength="12" placeholder="张工" autocomplete="name">
+      <div class="hint" id="name-hint">最多 7 个汉字</div>
+    </div>
+    <div class="field">
+      <label for="dept">单位 / 部门</label>
+      <input id="dept" maxlength="12" placeholder="硬件部" autocomplete="organization">
+      <div class="hint" id="dept-hint">最多 7 个汉字</div>
+    </div>
+    <div class="field">
+      <label for="sid">工号（可留空）</label>
+      <input id="sid" maxlength="8" placeholder="E1042">
+      <div class="hint" id="sid-hint">最多 7 个字符</div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <button id="save" class="primary" disabled>写进工牌</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <label style="margin-bottom:8px">怎么用</label>
+    <ol>
+      <li>工牌屏幕顶部写着「我的名片」时才能连上。如果写的是「附近的名片」，短按中间那颗键切回来。</li>
+      <li>点「连接工牌」，在系统弹出的列表里选 <code>FoloTag</code>。</li>
+      <li>填好三个格子，点「写进工牌」。写完屏幕会提示「名片已更新」。</li>
+      <li>按上键翻到第二页，就是你的二维码名片。断掉连接后别人照样能收到这张卡。</li>
+    </ol>
+    <p class="hint" style="margin-top:12px">需要 Chrome 或 Edge（安卓手机、Windows、Mac 都行）。iPhone 上的浏览器不支持这个用法。</p>
+  </div>
+
+  <footer>只在本机浏览器里跟工牌直接对话，输入的内容不会发到任何服务器。</footer>
+</main>
+
+<script>
+"use strict";
+
+const SVC_UUID = 0xfff0;
+const CHR_CTRL = 0xfff1;
+const CHR_CARD = 0xfff2;
+
+// 分片协议与固件 main/app_proximity.c 里的一致。
+const OP_BEGIN = 0x01;
+const OP_NAME = 0x02;
+const OP_DEPT = 0x03;
+const OP_ID = 0x04;
+const OP_COMMIT = 0x05;
+
+// 一包最多带 16 字节内容：对端 MTU 可能只有 23，减去 3 字节 ATT 头，
+// 再加我们自己 1 字节操作码，17 字节一定塞得下。
+const CHUNK = 16;
+
+// 固件端每个字段的缓冲上限（含结尾的 '\0'），实际可写少一个字节。
+const LIMIT = { name: 23, dept: 23, sid: 7 };
+
+const el = (id) => document.getElementById(id);
+const enc = new TextEncoder();
+
+let device = null;
+let ctrl = null;
+let cardChr = null;
+
+function say(message, kind) {
+  const box = el("status");
+  box.textContent = message;
+  box.className = "show " + (kind || "info");
+}
+
+function clearStatus() {
+  el("status").className = "";
+  el("status").textContent = "";
+}
+
+function setConnected(on) {
+  el("connect").disabled = on;
+  el("disconnect").disabled = !on;
+  el("save").disabled = !on;
+}
+
+// 按 UTF-8 字符边界切包。设备端遇到半个汉字会整块丢掉（它没法显示半个字），
+// 所以切分必须落在字符边界上，否则名字里会凭空少一个字。
+function splitByChar(bytes, max) {
+  const out = [];
+  let cur = [];
+  let i = 0;
+  while (i < bytes.length) {
+    const lead = bytes[i];
+    let len = 1;
+    if ((lead & 0x80) === 0x00) len = 1;
+    else if ((lead & 0xe0) === 0xc0) len = 2;
+    else if ((lead & 0xf0) === 0xe0) len = 3;
+    else if ((lead & 0xf8) === 0xf0) len = 4;
+    len = Math.min(len, bytes.length - i);
+
+    if (cur.length + len > max && cur.length > 0) {
+      out.push(new Uint8Array(cur));
+      cur = [];
+    }
+    for (let k = 0; k < len; k += 1) cur.push(bytes[i + k]);
+    i += len;
+  }
+  if (cur.length) out.push(new Uint8Array(cur));
+  return out;
+}
+
+async function writeOp(op, text) {
+  const body = text ? enc.encode(text) : new Uint8Array(0);
+  if (!body.length) {
+    await ctrl.writeValueWithResponse(new Uint8Array([op]));
+    return;
+  }
+  for (const chunk of splitByChar(body, CHUNK)) {
+    const pkt = new Uint8Array(chunk.length + 1);
+    pkt[0] = op;
+    pkt.set(chunk, 1);
+    await ctrl.writeValueWithResponse(pkt);
+  }
+}
+
+function byteLength(text) {
+  return enc.encode(text).length;
+}
+
+function updateCounter(id, hintId, limit, label) {
+  const value = el(id).value;
+  const used = byteLength(value);
+  const over = used > limit;
+  const left = Math.max(0, limit - used);
+  const hint = el(hintId);
+  hint.textContent = over
+    ? `超了 ${used - limit} 字节，请删一点（中文一个字算 3 字节）`
+    : `${label}：已用 ${used} 字节，还能写 ${left} 字节`;
+  hint.className = over ? "hint over" : "hint";
+  return !over;
+}
+
+function refreshCounters() {
+  const okName = updateCounter("name", "name-hint", LIMIT.name, "姓名");
+  const okDept = updateCounter("dept", "dept-hint", LIMIT.dept, "单位");
+  const okId = updateCounter("sid", "sid-hint", LIMIT.sid, "工号");
+  const hasName = el("name").value.trim().length > 0;
+  el("save").disabled = !(ctrl && okName && okDept && okId && hasName);
+  return okName && okDept && okId;
+}
+
+async function connect() {
+  if (!navigator.bluetooth) {
+    say("这个浏览器不支持网页连蓝牙。请用电脑或安卓手机上的 Chrome / Edge 打开本页。", "err");
+    return;
+  }
+  clearStatus();
+  say("正在准备蓝牙…", "info");
+  try {
+    device = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [SVC_UUID] }],
+      optionalServices: [SVC_UUID],
+    });
+    device.addEventListener("gattserverdisconnected", () => {
+      ctrl = null;
+      cardChr = null;
+      setConnected(false);
+      say("连接断开了。要改名片就再连一次。", "info");
+    });
+
+    say("正在连接 " + (device.name || "工牌") + " …", "info");
+    const server = await device.gatt.connect();
+    const service = await server.getPrimaryService(SVC_UUID);
+    ctrl = await service.getCharacteristic(CHR_CTRL);
+    cardChr = await service.getCharacteristic(CHR_CARD);
+
+    setConnected(true);
+    say("已连上。可以填内容了。", "ok");
+    await showCurrent();
+  } catch (err) {
+    ctrl = null;
+    cardChr = null;
+    setConnected(false);
+    if (err && err.name === "NotFoundError") {
+      say("没有选中工牌。再点一次「连接工牌」，在列表里选 FoloTag。", "info");
+    } else {
+      say("连不上：" + (err && err.message ? err.message : err) +
+          "\n先确认工牌屏幕顶部写的是「我的名片」，并且离手机近一点。", "err");
+    }
+  }
+}
+
+async function showCurrent() {
+  if (!cardChr) return;
+  try {
+    const view = await cardChr.readValue();
+    const text = new TextDecoder().decode(view);
+    const parts = text.split("|");
+    const box = el("now");
+    if (!parts[0]) {
+      box.hidden = false;
+      box.innerHTML = "工牌上现在<b>还没有自定义名片</b>，用的是内置的演示卡。";
+      return;
+    }
+    box.hidden = false;
+    box.innerHTML = "工牌上现在写着：<b>" + escapeHtml(parts[0]) + "</b>" +
+      (parts[1] ? " · " + escapeHtml(parts[1]) : "") +
+      (parts[2] ? "（工号 " + escapeHtml(parts[2]) + "）" : "");
+    // 顺手填进输入框，改一个字比从头打省事。
+    if (!el("name").value) el("name").value = parts[0];
+    if (!el("dept").value && parts[1]) el("dept").value = parts[1];
+    if (!el("sid").value && parts[2]) el("sid").value = parts[2];
+    refreshCounters();
+  } catch (err) {
+    el("now").hidden = true;
+  }
+}
+
+function escapeHtml(text) {
+  return text.replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[c]);
+}
+
+async function save() {
+  if (!ctrl) return;
+  const name = el("name").value.trim();
+  const dept = el("dept").value.trim();
+  const sid = el("sid").value.trim();
+
+  if (!name) {
+    say("姓名不能空着：名片上至少要有个名字。", "err");
+    return;
+  }
+  if (!refreshCounters()) {
+    say("有字段超长了，删一点再写。", "err");
+    return;
+  }
+
+  el("save").disabled = true;
+  try {
+    say("正在写入…", "info");
+    await writeOp(OP_BEGIN);
+    await writeOp(OP_NAME, name);
+    await writeOp(OP_DEPT, dept);
+    await writeOp(OP_ID, sid);
+    await writeOp(OP_COMMIT);
+
+    say("写好了。工牌屏幕会闪一下「名片已更新」，按上键翻到第二页就是你的码。", "ok");
+    await showCurrent();
+  } catch (err) {
+    say("写入失败：" + (err && err.message ? err.message : err) +
+        "\n如果提示长度不对，把最长的那一格删掉一两个字再试。", "err");
+  } finally {
+    el("save").disabled = false;
+    refreshCounters();
+  }
+}
+
+function disconnect() {
+  if (device && device.gatt.connected) device.gatt.disconnect();
+  ctrl = null;
+  cardChr = null;
+  setConnected(false);
+  clearStatus();
+}
+
+["name", "dept", "sid"].forEach((id) => {
+  el(id).addEventListener("input", refreshCounters);
+});
+
+el("connect").addEventListener("click", connect);
+el("disconnect").addEventListener("click", disconnect);
+el("save").addEventListener("click", save);
+
+refreshCounters();
+if (!navigator.bluetooth) {
+  say("这个浏览器打不开蓝牙接口。请用电脑或安卓手机上的 Chrome / Edge 打开本页，iPhone 上的浏览器不支持。", "err");
+}
+</script>
+</body>
+</html>
