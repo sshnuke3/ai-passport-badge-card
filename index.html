@@ -244,8 +244,8 @@ function updateCounter(id, hintId, limit, label) {
   const left = Math.max(0, limit - used);
   const hint = el(hintId);
   hint.textContent = over
-    ? `超了 ${used - limit} 字节，请删一点（中文一个字算 3 字节）`
-    : `${label}：已用 ${used} 字节，还能写 ${left} 字节`;
+    ? `${label}超了 ${used - limit} 字节，删掉一两个字（一个汉字算 3 字节）`
+    : `还能写 ${left} 字节${label === "工号" ? "" : `，约 ${Math.floor(left / 3)} 个汉字`}`;
   hint.className = over ? "hint over" : "hint";
   return !over;
 }
